@@ -75,7 +75,14 @@ class Pipeline:
         self.deps = deps
 
     def run(self, state: RAGState) -> tuple[RAGState, list[StepTrace]]:
-        """Execute all steps in order; return final state and trace list."""
+        """Execute all steps in order; return final state and trace list.
+
+        Steps can write ``state.metadata["_trace_inputs"]`` and
+        ``state.metadata["_trace_outputs"]`` (plain dicts) before returning.
+        The pipeline pops those keys and stores them in the StepTrace, keeping
+        them out of the final state while making them available in the trace for
+        both debugging and the teaching examples.
+        """
         traces: list[StepTrace] = []
         for name, fn in self.steps:
             started_at = datetime.now(timezone.utc)
@@ -85,12 +92,16 @@ class Pipeline:
             except Exception as exc:
                 raise RuntimeError(f"Step '{name}' failed: {exc}") from exc
             latency_ms = (time.perf_counter() - t0) * 1000
+            trace_in = state.metadata.pop("_trace_inputs", {})
+            trace_out = state.metadata.pop("_trace_outputs", {})
             traces.append(
                 StepTrace(
                     step=name,
                     started_at=started_at,
                     ended_at=datetime.now(timezone.utc),
                     latency_ms=latency_ms,
+                    inputs=trace_in,
+                    outputs=trace_out,
                 )
             )
         return state, traces

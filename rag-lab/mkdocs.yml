@@ -49,14 +49,15 @@ nav:
       - LLM-as-judge: concepts/llm-as-judge.md
   - Architectures:
       - 1 · Standard RAG: architectures/standard.md
-      - 2 · Hybrid RAG: architectures/hybrid.md
-      - 3 · Recursive RAG: architectures/recursive.md
-      - 4 · Self-RAG: architectures/self_rag.md
-      - 5 · Graph-Augmented: architectures/graph.md
-      - 6 · Knowledge-Enhanced: architectures/knowledge_enhanced.md
-      - 7 · HyDE: architectures/hyde.md
-      - 8 · Query-Transforming: architectures/query_transform.md
-      - 9 · Memory-Augmented: architectures/memory_rag.md
-      - 10 · Streaming / Real-Time: architectures/streaming.md
-  - n8n workflows: n8n/
-# TODO: uncomment nav entries as each page is written so the site never links to 404s.
+      # Remaining chapters unlock as each phase lands:
+      # - 2 · Hybrid RAG: architectures/hybrid.md
+      # - 3 · Recursive RAG: architectures/recursive.md
+      # - 4 · Self-RAG: architectures/self_rag.md
+      # - 5 · Graph-Augmented: architectures/graph.md
+      # - 6 · Knowledge-Enhanced: architectures/knowledge_enhanced.md
+      # - 7 · HyDE: architectures/hyde.md
+      # - 8 · Query-Transforming: architectures/query_transform.md
+      # - 9 · Memory-Augmented: architectures/memory_rag.md
+      # - 10 · Streaming / Real-Time: architectures/streaming.md
+  - n8n workflows:
+      - Standard RAG: n8n/standard.md

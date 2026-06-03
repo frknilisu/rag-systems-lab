@@ -97,6 +97,8 @@ def build_vectorstore(config: VectorDBConfig) -> Any:
 
 
 def build_architecture(name: str, **kwargs: Any) -> Any:
+    """Instantiate the architecture named in ``name``."""
+    _ensure_architectures_loaded()
     cls = _ARCHITECTURE_REGISTRY.get(name)
     if cls is None:
         raise ConfigError(
@@ -108,6 +110,7 @@ def build_architecture(name: str, **kwargs: Any) -> Any:
 
 def list_providers() -> dict[str, list[str]]:
     _ensure_providers_loaded()
+    _ensure_architectures_loaded()
     return {
         "llm": sorted(_LLM_REGISTRY),
         "embeddings": sorted(_EMBEDDING_REGISTRY),
@@ -116,9 +119,10 @@ def list_providers() -> dict[str, list[str]]:
     }
 
 
-# ── Lazy provider import ───────────────────────────────────────────────────────
+# ── Lazy imports ──────────────────────────────────────────────────────────────
 
 _providers_loaded = False
+_architectures_loaded = False
 
 
 def _ensure_providers_loaded() -> None:
@@ -128,3 +132,12 @@ def _ensure_providers_loaded() -> None:
     # Import provider packages; their __init__.py triggers @register_* calls.
     import rag_lab.providers  # noqa: F401
     _providers_loaded = True
+
+
+def _ensure_architectures_loaded() -> None:
+    global _architectures_loaded
+    if _architectures_loaded:
+        return
+    # Import architectures package; its __init__.py triggers @register_architecture calls.
+    import rag_lab.architectures  # noqa: F401
+    _architectures_loaded = True

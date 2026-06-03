@@ -96,99 +96,46 @@ def index(
 @app.command()
 def query(
     question: str = typer.Argument(..., help="Question to answer"),
+    architecture: str = typer.Option("standard", "--arch", "-a", help="Architecture to use"),
     top_k: int = typer.Option(0, "--top-k", "-k", help="Override retrieval top-k (0 = use config)"),
     json_output: bool = typer.Option(False, "--json", help="Output raw JSON"),
     config_root: Optional[Path] = typer.Option(None, "--config-root", hidden=True),
 ) -> None:
     """Retrieve relevant context and generate an answer with a pipeline trace.
 
-    Uses dense retrieval if an index exists; falls back to pure LLM (no context)
-    if the vector store is empty. The full step trace is printed after the answer.
+    Delegates to the registered architecture (default: standard). The full
+    step trace — including per-step latency and I/O summary — is printed
+    after the answer so you can see exactly what the pipeline did.
     """
     cfg = _get_config(config_root)
-    k = top_k if top_k > 0 else cfg.retrieval.top_k
 
-    from rag_lab.core.pipeline import Pipeline, PipelineDeps
-    from rag_lab.core.registry import build_embedding, build_llm, build_vectorstore
-    from rag_lab.core.types import RAGResult, RAGState
+    if top_k > 0:
+        from rag_lab.config.schema import RetrievalConfig
+        cfg = cfg.model_copy(
+            update={"retrieval": RetrievalConfig(top_k=top_k, hybrid=cfg.retrieval.hybrid)}
+        )
+
+    from rag_lab.core.registry import build_architecture
     from rag_lab.observability.tracing import format_trace
-    from rag_lab.retrieval.dense import DenseRetriever
 
-    # Build providers (embedder + store optional — degrade gracefully).
     try:
-        llm = build_llm(cfg.llm)
-        embedder = build_embedding(cfg.embeddings)
-        store = build_vectorstore(cfg.vectordb)
+        pipeline = build_architecture(architecture, config=cfg)
     except Exception as exc:
-        err_console.print(f"[red]Provider error:[/red] {exc}")
+        err_console.print(f"[red]Architecture error:[/red] {exc}")
         raise typer.Exit(1) from exc
 
-    retriever = DenseRetriever(embedder=embedder, store=store)
-    deps = PipelineDeps(llm=llm, embedder=embedder, store=store)
-
-    # ── Pipeline steps ─────────────────────────────────────────────────────
-
-    def _retrieve_step(state: RAGState, d: PipelineDeps) -> RAGState:
-        if store.count() == 0:
-            state.metadata["retrieval_note"] = "index empty — answering from LLM knowledge"
-            state.retrieval_results = []
-            return state
-        state.retrieval_results = retriever.retrieve(state.question, top_k=k)
-        return state
-
-    def _generate_step(state: RAGState, d: PipelineDeps) -> RAGState:
-        if state.retrieval_results:
-            ctx_text = "\n\n---\n\n".join(
-                f"[Source chunk {r.rank + 1}, score {r.score:.3f}]\n{r.chunk.text}"
-                for r in state.retrieval_results
-            )
-            system_msg = (
-                "You are a helpful assistant. "
-                "Answer the question using ONLY the provided context. "
-                "If the context does not contain enough information, say so."
-            )
-        else:
-            ctx_text = "(no retrieved context)"
-            system_msg = (
-                "You are a helpful assistant. "
-                "No context was retrieved. Answer from your own knowledge and note the limitation."
-            )
-        messages = [
-            {"role": "system", "content": system_msg},
-            {"role": "user", "content": f"Context:\n{ctx_text}\n\nQuestion: {state.question}"},
-        ]
-        state.answer = d.llm.complete(messages)
-        return state
-
-    # ── Run ────────────────────────────────────────────────────────────────
-
-    pipeline = Pipeline(
-        steps=[("retrieve", _retrieve_step), ("generate", _generate_step)],
-        deps=deps,
-    )
-    state = RAGState(question=question)
     try:
-        state, traces = pipeline.run(state)
+        result = pipeline.query(question)
     except Exception as exc:
         err_console.print(f"[red]Pipeline error:[/red] {exc}")
         raise typer.Exit(1) from exc
-
-    result = RAGResult(
-        answer=state.answer,
-        contexts=state.retrieval_results,
-        trace=traces,
-        config_snapshot=cfg.model_dump(),
-    )
 
     if json_output:
         console.print_json(result.model_dump_json())
         return
 
-    console.print(Panel(result.answer, title="Answer", border_style="green"))
+    console.print(Panel(result.answer, title=f"Answer  [{architecture}]", border_style="green"))
     console.print(format_trace(result))
-
-    if state.metadata.get("retrieval_note"):
-        console.print(f"\n[yellow]Note:[/yellow] {state.metadata['retrieval_note']}")
 
 
 # ── providers ─────────────────────────────────────────────────────────────────

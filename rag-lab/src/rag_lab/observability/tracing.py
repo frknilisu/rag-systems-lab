@@ -10,11 +10,17 @@ from rag_lab.core.types import RAGResult, StepTrace
 
 
 def format_trace(result: RAGResult) -> str:
-    """Return a human-readable multi-line trace summary."""
+    """Return a human-readable multi-line trace summary.
+
+    Includes per-step timing plus any inputs/outputs the step recorded
+    in state.metadata["_trace_inputs"] / ["_trace_outputs"].
+    """
     lines: list[str] = ["", "── Pipeline trace ────────────────────────────────────"]
     total = sum(t.latency_ms for t in result.trace)
     for t in result.trace:
         lines.append(f"  {t.step:<25} {t.latency_ms:>8.1f} ms")
+        for k, v in (t.outputs or {}).items():
+            lines.append(f"    {'':25} {k}: {v}")
     lines.append(f"  {'TOTAL':<25} {total:>8.1f} ms")
     lines.append("─────────────────────────────────────────────────────")
     if result.contexts:
