@@ -61,8 +61,9 @@ Built in phases — each one is complete (code + tests + docs) before the next s
 | 0 | Foundation: config, core types/interfaces, pipeline runner, registry, LiteLLM + SentenceTransformers + Chroma providers, Typer CLI | ✅ Done |
 | 0.5 | Repo-as-tutorial setup: README, mkdocs site, concept primers | ✅ Done |
 | 1 | Ingestion & retrieval primitives: loaders, chunkers (fixed/recursive), Indexer (embed+Chroma+BM25), DenseRetriever, BM25Retriever, RRF fusion, HybridRetriever, CrossEncoderReranker | ✅ Done |
-| 2 | Standard RAG — first full architecture + teaching chapter | 🔜 Next |
-| 3–10 | Remaining 9 architectures | ⏳ |
+| 2 | Standard RAG — `StandardRAGPipeline`, generation module, teaching chapter, n8n spec | ✅ Done |
+| 3 | Hybrid RAG | 🔜 Next |
+| 4–10 | Remaining 8 architectures | ⏳ |
 
 **What works today:**
 
@@ -70,12 +71,16 @@ Built in phases — each one is complete (code + tests + docs) before the next s
 # Index a document (real chunking + embedding + Chroma + BM25)
 rag-lab index data/corpora/intro_to_rag.txt
 
-# Query with real dense retrieval + LLM generation
+# Query via Standard RAG pipeline (default architecture)
 RAGLAB_LLM__PROFILE=ollama RAGLAB_LLM__MODEL="ollama/qwen2.5:3b" \
 rag-lab query "What is the difference between BM25 and dense retrieval?"
+
+# Or run the annotated example script
+RAGLAB_LLM__PROFILE=ollama RAGLAB_LLM__MODEL="ollama/qwen2.5:3b" \
+python examples/01_standard_rag.py
 ```
 
-**What's next (Phase 2):** Standard RAG — the first proper `RAGPipeline` implementation with a full teaching chapter, runnable example, and n8n spec.
+**What's next (Phase 3):** Hybrid RAG — adds BM25 keyword search alongside dense retrieval and merges the two ranked lists with Reciprocal Rank Fusion.
 
 ## Contributing
 
