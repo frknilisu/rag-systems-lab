@@ -1,0 +1,27 @@
+# config/llm/anthropic.yaml
+# Anthropic Claude — API access via Anthropic's own API.
+#
+# ⚠️  IMPORTANT: claude.ai Pro subscription ≠ API access.
+#     They are two separate products billed separately:
+#       • claude.ai Pro ($20/mo) → access to Claude on the website/app only.
+#       • Anthropic API          → pay-per-token, separate billing.
+#     Get your API key at: https://console.anthropic.com/
+#     New accounts get $5 free credit to start.
+#
+# LiteLLM handles Anthropic natively with ANTHROPIC_API_KEY in .env.
+
+provider: litellm
+api_key_env: ANTHROPIC_API_KEY
+
+# ── Active model ──────────────────────────────────────────────────────────────
+model: claude-sonnet-4-6      # best balance of quality and cost
+
+# ── Model options ─────────────────────────────────────────────────────────────
+# Fastest and cheapest:
+# model: claude-haiku-4-5-20251001
+#
+# Best quality (most expensive):
+# model: claude-opus-4-6
+#
+# Balanced (default):
+# model: claude-sonnet-4-6

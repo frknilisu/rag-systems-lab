@@ -1,0 +1,16 @@
+# config/embeddings/openai_small.yaml
+# OpenAI embeddings — highest quality, small cost.
+# Needs OPENAI_API_KEY in .env even if you use a different LLM provider.
+# Cost: ~$0.00002 per 1,000 tokens (practically free for experiments).
+
+provider: litellm
+api_key_env: OPENAI_API_KEY
+model: text-embedding-3-small
+dimension: 1536
+
+# ── Model options ─────────────────────────────────────────────────────────────
+# Cheaper, still very good:
+# model: text-embedding-3-small    # $0.00002/1K tokens, 1536d — default
+#
+# Best quality:
+# model: text-embedding-3-large    # $0.00013/1K tokens, 3072d

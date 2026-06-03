@@ -1,0 +1,7 @@
+# config/vectordb/chroma.yaml
+# Chroma — local on-disk vector store, no infrastructure required.
+# Data persists in `path` relative to the working directory.
+
+provider: chroma
+path: .chroma
+collection: rag_lab

@@ -1,0 +1,29 @@
+# config/llm/ollama.yaml
+# Ollama — run models fully locally, no API key, no cost.
+# Install: https://ollama.com/
+# Pull a model first: `ollama pull llama3.2`
+#
+# Set OLLAMA_BASE_URL in .env if Ollama isn't on localhost.
+
+provider: litellm
+base_url_env: OLLAMA_BASE_URL      # default: http://localhost:11434
+# api_key is not needed for Ollama
+
+# ── Active model ──────────────────────────────────────────────────────────────
+model: ollama/llama3.2
+
+# ── Model options ─────────────────────────────────────────────────────────────
+# Small and fast:
+# model: ollama/llama3.2        # 3B, good for testing
+# model: ollama/phi3.5          # 3.8B, fast
+#
+# Better quality:
+# model: ollama/llama3.1        # 8B
+# model: ollama/mistral         # 7B
+# model: ollama/qwen2.5         # 7B, strong
+#
+# Best local quality (needs ~5GB+ RAM):
+# model: ollama/llama3.1:70b    # 70B quantized
+#
+# Pull any model first: `ollama pull <model-name>`
+# Browse models: https://ollama.com/library

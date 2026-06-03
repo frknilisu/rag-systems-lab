@@ -1,0 +1,26 @@
+# config/embeddings/local_st.yaml
+# sentence-transformers — runs fully locally, NO API KEY, NO COST.
+# Downloads the model (~90MB) on first run, then cached locally.
+#
+# This is the recommended embedding profile when using OpenRouter or Groq
+# as your LLM, since those providers don't offer embedding endpoints.
+#
+# Requires: pip install sentence-transformers   (in rag-lab[embeddings] extra)
+
+provider: sentence_transformers
+model: all-MiniLM-L6-v2      # 90MB, 384 dimensions, fast, good quality
+dimension: 384
+
+# ── Model options ─────────────────────────────────────────────────────────────
+# Fastest (lowest quality):
+# model: all-MiniLM-L6-v2          # 90MB,  384d — default
+#
+# Better quality (slower):
+# model: all-mpnet-base-v2          # 420MB, 768d
+#
+# Best quality for RAG (recommended for production):
+# model: BAAI/bge-small-en-v1.5     # 130MB, 384d — strong retrieval performance
+# model: BAAI/bge-base-en-v1.5      # 430MB, 768d
+#
+# Multilingual:
+# model: paraphrase-multilingual-MiniLM-L12-v2   # 470MB, 384d

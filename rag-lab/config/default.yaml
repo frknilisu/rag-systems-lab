@@ -1,0 +1,65 @@
+# config/default.yaml
+# Switch providers by changing the `profile` value — no code changes needed.
+# Each profile name maps to a file in config/llm/ or config/embeddings/.
+#
+# QUICK PROVIDER GUIDE:
+#   openrouter_free  → OpenRouter free-tier models (needs OPENROUTER_API_KEY)
+#   anthropic        → Claude via Anthropic API    (needs ANTHROPIC_API_KEY)
+#   groq_free        → Groq free-tier models       (needs GROQ_API_KEY)
+#   ollama           → Local models via Ollama     (needs Ollama running)
+#
+# EMBEDDINGS GUIDE:
+#   local_st         → sentence-transformers, runs locally, NO KEY NEEDED ✓
+#   openai_small     → text-embedding-3-small, $0.00002/1K tokens (needs OPENAI_API_KEY)
+#
+# RECOMMENDED STARTER (zero cost):
+#   llm:        openrouter_free + OPENROUTER_API_KEY
+#   embeddings: local_st        (no key needed)
+#   vectordb:   chroma          (local on-disk)
+
+log_level: INFO
+
+llm:
+  profile: openrouter_free     # ← change this line to switch LLM provider
+  temperature: 0.0
+  max_tokens: 1024
+
+embeddings:
+  profile: local_st            # ← sentence-transformers, no key required
+                               #   switch to openai_small if you want higher quality
+
+vectordb:
+  profile: chroma              # chroma (local) | qdrant | faiss
+
+reranker:
+  enabled: false
+  profile: cross_encoder       # cross_encoder (local) | cohere
+
+ingestion:
+  chunker: recursive           # fixed | recursive | semantic | token
+  chunk_size: 512
+  chunk_overlap: 64
+
+retrieval:
+  top_k: 5
+  hybrid:
+    enabled: false
+    fusion: rrf
+    sparse_weight: 0.5
+
+architectures:
+  recursive:
+    max_hops: 3
+  self_rag:
+    relevance_threshold: 0.6
+    max_retrieval_rounds: 2
+  hyde:
+    n_hypotheticals: 1
+  query_transform:
+    mode: decompose
+  memory_rag:
+    store: vector
+    max_memory_items: 20
+  streaming:
+    window_seconds: 3600
+    refresh_seconds: 60

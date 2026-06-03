@@ -1,0 +1,27 @@
+# config/llm/groq_free.yaml
+# Groq — ultra-fast inference (LPU hardware), very generous free tier.
+# Free tier: ~14,400 requests/day depending on model.
+# Get your key: https://console.groq.com/
+#
+# LiteLLM handles Groq natively: prefix model with "groq/"
+
+provider: litellm
+api_key_env: GROQ_API_KEY
+
+# ── Active model ──────────────────────────────────────────────────────────────
+model: groq/llama-3.1-8b-instant   # fastest, good for development
+
+# ── Model options ─────────────────────────────────────────────────────────────
+# Fast and free (great for dev/testing):
+# model: groq/llama-3.1-8b-instant
+#
+# Better quality, still free:
+# model: groq/llama-3.3-70b-versatile
+#
+# Strong reasoning:
+# model: groq/deepseek-r1-distill-llama-70b
+#
+# Fastest (good for high-volume eval runs):
+# model: groq/gemma2-9b-it
+#
+# Full model list: https://console.groq.com/docs/models

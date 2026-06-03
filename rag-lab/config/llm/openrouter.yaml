@@ -1,0 +1,45 @@
+# config/llm/openrouter.yaml
+# OpenRouter — access 100+ models via one API key.
+# Free models are marked ":free" and require no credit card.
+# Full list: https://openrouter.ai/models?q=free
+#
+# LiteLLM handles this natively: prefix model names with "openrouter/"
+# and set OPENROUTER_API_KEY in .env.
+#
+# NOTE: OpenRouter provides LLM completions ONLY — no embeddings.
+#       Use embeddings.profile: local_st (sentence-transformers) alongside this.
+
+provider: litellm
+api_key_env: OPENROUTER_API_KEY
+base_url: https://openrouter.ai/api/v1
+
+# ── Active model ──────────────────────────────────────────────────────────────
+# Change this one line to switch between the free models below.
+model: openrouter/meta-llama/llama-3.1-8b-instruct:free
+
+# ── Free model options (all $0.00) ────────────────────────────────────────────
+# Uncomment the one you want to use and comment out the active model above.
+#
+# Meta Llama (good general-purpose)
+# model: openrouter/meta-llama/llama-3.1-8b-instruct:free
+# model: openrouter/meta-llama/llama-3.2-3b-instruct:free
+#
+# Mistral (strong reasoning)
+# model: openrouter/mistralai/mistral-7b-instruct:free
+#
+# Google Gemma (lightweight, fast)
+# model: openrouter/google/gemma-2-9b-it:free
+#
+# Microsoft Phi (small but capable)
+# model: openrouter/microsoft/phi-3-mini-128k-instruct:free
+#
+# Qwen (multilingual, strong on code)
+# model: openrouter/qwen/qwen-2.5-7b-instruct:free
+#
+# DeepSeek (strong reasoning, coding)
+# model: openrouter/deepseek/deepseek-r1-distill-llama-70b:free
+#
+# ── Optional HTTP headers (some models/apps need these) ───────────────────────
+# extra_headers:
+#   HTTP-Referer: https://github.com/yourname/rag-lab
+#   X-Title: RAG-Lab

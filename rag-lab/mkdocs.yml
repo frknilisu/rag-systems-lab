@@ -1,0 +1,62 @@
+# mkdocs.yml — the docs site IS the tutorial. Nav order = the curriculum.
+# Build: `make docs-serve` (live preview) / `make docs-build` (static site for GitHub Pages).
+site_name: RAG-Lab
+site_description: Learn modern RAG by building all of it — a tutorial in code.
+# site_url: https://<user>.github.io/rag-lab/   # TODO
+repo_url: https://github.com/<user>/rag-lab      # TODO
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  palette:
+    - scheme: default
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - scheme: slate
+      toggle: { icon: material/weather-sunny, name: Light mode }
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
+  - pymdownx.highlight
+  - pymdownx.tabbed: { alternate_style: true }
+  - toc: { permalink: true }
+
+plugins:
+  - search
+  - mermaid2
+
+nav:
+  - Home: index.md
+  - Learning path: learning-path.md
+  - Concepts:
+      - Embeddings: concepts/embeddings.md
+      - Chunking: concepts/chunking.md
+      - Vector search: concepts/vector-search.md
+      - BM25 keyword search: concepts/bm25.md
+      - Fusion (RRF): concepts/fusion-rrf.md
+      - Reranking: concepts/reranking.md
+      - LLM-as-judge: concepts/llm-as-judge.md
+  - Architectures:
+      - 1 · Standard RAG: architectures/standard.md
+      - 2 · Hybrid RAG: architectures/hybrid.md
+      - 3 · Recursive RAG: architectures/recursive.md
+      - 4 · Self-RAG: architectures/self_rag.md
+      - 5 · Graph-Augmented: architectures/graph.md
+      - 6 · Knowledge-Enhanced: architectures/knowledge_enhanced.md
+      - 7 · HyDE: architectures/hyde.md
+      - 8 · Query-Transforming: architectures/query_transform.md
+      - 9 · Memory-Augmented: architectures/memory_rag.md
+      - 10 · Streaming / Real-Time: architectures/streaming.md
+  - n8n workflows: n8n/
+# TODO: uncomment nav entries as each page is written so the site never links to 404s.

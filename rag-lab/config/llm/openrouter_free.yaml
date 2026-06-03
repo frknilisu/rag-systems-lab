@@ -1,0 +1,11 @@
+# config/llm/openrouter_free.yaml
+# Alias profile that default.yaml points to by default.
+# Identical to openrouter.yaml — exists so you can keep openrouter.yaml
+# as a "full reference" and this as the active quick-start config.
+
+provider: litellm
+api_key_env: OPENROUTER_API_KEY
+base_url: https://openrouter.ai/api/v1
+model: openrouter/meta-llama/llama-3.1-8b-instruct:free
+
+# Swap the model to any ":free" option from config/llm/openrouter.yaml
