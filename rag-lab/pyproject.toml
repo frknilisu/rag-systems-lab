@@ -17,14 +17,15 @@ dependencies = [
     "structlog>=24.0",
     "python-dotenv>=1.0",
     "rich>=13.0",
+    "rank-bm25>=0.2",
 ]
 
 [project.optional-dependencies]
 llm = ["litellm>=1.40"]
-embeddings = ["sentence-transformers>=3.0"]
+embeddings = ["sentence-transformers"]
 chroma = ["chromadb>=0.5"]
 qdrant = ["qdrant-client>=1.9"]
-rerank = ["sentence-transformers>=3.0"]
+rerank = ["sentence-transformers"]
 graph = ["networkx>=3.3"]
 eval = ["ragas>=0.1"]
 api = ["fastapi>=0.111", "uvicorn[standard]>=0.30"]
@@ -65,8 +66,15 @@ strict = true
 ignore_missing_imports = true
 
 [tool.uv]
-# torch 2.3+ and onnxruntime 1.24+ dropped macOS Intel (x86_64) wheel support.
-constraint-dependencies = ["onnxruntime<1.24", "torch<2.3"]
+# torch 2.3+, onnxruntime 1.24+, and numpy 2.0+ dropped macOS Intel (x86_64) support
+# or ABI-break with torch 2.2. Pin all three to last compatible versions.
+constraint-dependencies = [
+    "onnxruntime<1.24",
+    "torch<2.3",
+    "numpy<2.0",
+    "transformers<5.0",        # transformers 5.x requires torch>=2.4
+    "sentence-transformers<3.0", # sentence-transformers 3.x pulls transformers 5.x
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

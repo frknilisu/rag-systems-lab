@@ -1,0 +1,61 @@
+Introduction to Retrieval-Augmented Generation
+
+Retrieval-Augmented Generation, or RAG, is a technique that improves large language model responses by first retrieving relevant information from an external knowledge base before generating an answer. Instead of relying solely on knowledge encoded in the model's parameters during training, RAG allows the model to consult up-to-date documents at query time.
+
+The core problem RAG solves is hallucination. Large language models are trained on static snapshots of data and can confidently produce incorrect answers about events after their training cutoff, private documents they have never seen, or domain-specific facts they were not trained on. RAG grounds the model in real retrieved evidence.
+
+How RAG Works
+
+A RAG pipeline has two main phases: indexing and querying. During indexing, documents are split into smaller chunks, each chunk is converted into a dense vector embedding using an embedding model, and these vectors are stored in a vector database. During querying, the user's question is embedded using the same model, the vector database is searched for the most similar chunk vectors, and those chunks are passed to the language model as context alongside the original question.
+
+Embeddings are numerical representations of text meaning. Two pieces of text with similar meaning will have embedding vectors that are close together in high-dimensional space, even if they use different words. This property enables semantic search: finding relevant documents by meaning, not just keyword overlap.
+
+Vector databases are specialized data stores optimized for nearest-neighbor search over high-dimensional vectors. Popular options include Chroma (local, great for development), Qdrant (production-grade, supports both dense and sparse vectors), and FAISS (Facebook AI Similarity Search, in-memory and very fast).
+
+Chunking Strategy
+
+Chunking is the process of splitting documents into smaller pieces before embedding. This matters because embedding models have a maximum input length, and smaller chunks allow more precise retrieval. If a chunk is too large, the embedding averages over many topics and becomes less specific. If too small, each chunk may lack enough context to be useful on its own.
+
+The recursive chunker tries natural text boundaries in order: paragraph breaks first, then line breaks, then sentence ends, then word boundaries. This preserves the logical structure of text better than cutting at a fixed character count.
+
+Chunk overlap is the number of characters shared between adjacent chunks. Adding overlap ensures that information near chunk boundaries is not lost. A typical overlap is 10-15 percent of the chunk size.
+
+Sparse vs Dense Retrieval
+
+Dense retrieval uses embedding vectors and cosine similarity. It excels at semantic search but can miss exact keyword matches for rare terms, product IDs, or proper nouns.
+
+BM25 (Best Match 25) is a classical sparse retrieval algorithm based on term frequency and inverse document frequency. It counts exact token matches and is excellent for keyword-heavy queries. BM25 has no inference cost and never needs a GPU.
+
+Hybrid retrieval combines both dense and sparse results. Reciprocal Rank Fusion (RRF) is the standard way to merge them: instead of trying to normalize scores across the two systems, it uses only the rank of each result. A chunk at rank 1 in the dense list and rank 3 in the BM25 list receives a combined score that beats a chunk that only appears in one list. RRF consistently outperforms either retriever alone.
+
+Reranking
+
+A cross-encoder reranker takes the top candidates from retrieval and scores each (query, chunk) pair jointly, allowing the model to attend to both at once. This is much more accurate than a bi-encoder but also much slower, since it runs a forward pass per candidate. The typical pattern is to retrieve 20-50 candidates with a fast retriever, then rerank to get the top 5 sent to the LLM.
+
+Evaluation
+
+RAG systems are evaluated on retrieval quality and generation quality separately. Retrieval metrics include recall@k (did the gold chunk appear in the top k results?) and MRR (mean reciprocal rank). Generation metrics include faithfulness (does the answer follow from the retrieved context?) and answer relevance (does it actually answer the question?).
+
+A common failure mode is context stuffing: retrieving many chunks that include the right answer buried among noise. The LLM can handle this but performance degrades as the context window fills with irrelevant text. Reranking and better retrieval reduce this problem.
+
+Advanced RAG Architectures
+
+Standard RAG is the simplest version: one retrieval step, one generation step. It works well for straightforward factual questions. More complex questions benefit from advanced architectures.
+
+Recursive RAG (also called multi-hop RAG) decomposes a question into sub-questions, answers each with its own retrieval step, and synthesizes the final answer. This handles questions that require combining information from multiple documents.
+
+Self-RAG adds a reflection step: the model evaluates its own retrieved context and decides whether the evidence is sufficient before generating. If not, it can retrieve again. This reduces hallucination at the cost of extra latency.
+
+HyDE (Hypothetical Document Embeddings) addresses the mismatch between short queries and long document chunks. Instead of embedding the query directly, it first asks the LLM to generate a hypothetical answer, then uses that longer, richer text as the search query. This dramatically improves recall for vague or short questions.
+
+Query transformation techniques like decomposition (splitting multi-part questions into sub-questions) and step-back prompting (asking a more general question first) improve retrieval for complex queries.
+
+Memory-augmented RAG maintains a persistent store of past interactions, letting the system answer follow-up questions that reference earlier turns in a conversation.
+
+Streaming RAG keeps the knowledge base continuously updated with fresh data, enabling responses that reflect the latest information rather than a static index.
+
+Choosing the Right Architecture
+
+For most production use cases, start with Hybrid RAG (dense + BM25 + RRF). It beats Standard RAG on almost every benchmark with minimal added complexity. Add reranking if latency allows. Use Recursive RAG for multi-hop questions about structured domains. Use Self-RAG when faithfulness is critical and false positives are costly.
+
+The most common mistake is optimizing the generation step when the bottleneck is retrieval. A better LLM prompt cannot fix missing or wrong context. Evaluate retrieval recall first.

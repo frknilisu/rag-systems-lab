@@ -43,6 +43,7 @@ class IngestionConfig(BaseModel):
     chunker: str = "recursive"
     chunk_size: int = 512
     chunk_overlap: int = 64
+    bm25_index_path: str = ".bm25_index.pkl"
 
 
 class HybridConfig(BaseModel):

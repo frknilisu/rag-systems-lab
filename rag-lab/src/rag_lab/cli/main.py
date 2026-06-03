@@ -2,18 +2,14 @@
 
 Commands
 --------
-  rag-lab query   Ask a question (Phase 0: trivial pipeline demo)
-  rag-lab index   Index documents into the vector store
+  rag-lab index   Chunk, embed, and index documents into the vector store
+  rag-lab query   Retrieve context and generate an answer
   rag-lab providers  List registered providers
   rag-lab config  Show the resolved configuration
-
-Phase 0 ships the skeleton; full retrieval-augmented commands arrive in Phase 2.
 """
 
 from __future__ import annotations
 
-import json
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -40,63 +36,136 @@ def _get_config(config_root: Optional[Path] = None):  # type: ignore[return]
     return cfg
 
 
+# ── index ─────────────────────────────────────────────────────────────────────
+
+@app.command()
+def index(
+    path: str = typer.Argument(..., help="Path to a file or directory of documents"),
+    config_root: Optional[Path] = typer.Option(None, "--config-root", hidden=True),
+) -> None:
+    """Chunk, embed, and index documents into the vector store.
+
+    Accepts a single .txt/.md file or a directory (recursively finds all
+    .txt and .md files). Re-indexing the same file is safe — chunks are
+    upserted by ID, so duplicates are overwritten, not doubled.
+    """
+    cfg = _get_config(config_root)
+
+    from rag_lab.core.registry import build_embedding, build_vectorstore
+    from rag_lab.ingestion.chunkers import build_chunker
+    from rag_lab.ingestion.indexer import Indexer
+
+    console.print(f"[cyan]Loading providers…[/cyan]")
+    try:
+        embedder = build_embedding(cfg.embeddings)
+        store = build_vectorstore(cfg.vectordb)
+    except Exception as exc:
+        err_console.print(f"[red]Provider error:[/red] {exc}")
+        raise typer.Exit(1) from exc
+
+    chunker = build_chunker(cfg.ingestion)
+    indexer = Indexer(
+        embedder=embedder,
+        store=store,
+        chunker=chunker,
+        bm25_index_path=cfg.ingestion.bm25_index_path,
+    )
+
+    console.print(f"[cyan]Indexing[/cyan] {path} …")
+    try:
+        stats = indexer.index_file(path)
+    except Exception as exc:
+        err_console.print(f"[red]Indexing error:[/red] {exc}")
+        raise typer.Exit(1) from exc
+
+    console.print(
+        f"[green]✓ Indexed[/green] "
+        f"{stats.num_documents} doc(s) → "
+        f"[bold]{stats.num_chunks}[/bold] chunks "
+        f"({stats.duration_ms:.0f} ms)"
+    )
+    console.print(
+        f"  Vector store: [dim]{cfg.vectordb.path}[/dim] "
+        f"(total: {store.count()} chunks)\n"
+        f"  BM25 index:   [dim]{cfg.ingestion.bm25_index_path}[/dim]"
+    )
+
+
 # ── query ─────────────────────────────────────────────────────────────────────
 
 @app.command()
 def query(
     question: str = typer.Argument(..., help="Question to answer"),
-    architecture: str = typer.Option("standard", "--arch", "-a", help="Architecture name"),
+    top_k: int = typer.Option(0, "--top-k", "-k", help="Override retrieval top-k (0 = use config)"),
     json_output: bool = typer.Option(False, "--json", help="Output raw JSON"),
     config_root: Optional[Path] = typer.Option(None, "--config-root", hidden=True),
 ) -> None:
-    """Ask a question and get an answer with a pipeline trace.
+    """Retrieve relevant context and generate an answer with a pipeline trace.
 
-    Phase 0: runs a trivial two-step pipeline (retrieve=no-op, generate=LLM call)
-    to demonstrate the framework. Phase 2 wires in real retrieval.
+    Uses dense retrieval if an index exists; falls back to pure LLM (no context)
+    if the vector store is empty. The full step trace is printed after the answer.
     """
     cfg = _get_config(config_root)
+    k = top_k if top_k > 0 else cfg.retrieval.top_k
 
     from rag_lab.core.pipeline import Pipeline, PipelineDeps
-    from rag_lab.core.registry import build_llm
+    from rag_lab.core.registry import build_embedding, build_llm, build_vectorstore
     from rag_lab.core.types import RAGResult, RAGState
     from rag_lab.observability.tracing import format_trace
+    from rag_lab.retrieval.dense import DenseRetriever
 
-    llm = build_llm(cfg.llm)
-    deps = PipelineDeps(llm=llm)
+    # Build providers (embedder + store optional — degrade gracefully).
+    try:
+        llm = build_llm(cfg.llm)
+        embedder = build_embedding(cfg.embeddings)
+        store = build_vectorstore(cfg.vectordb)
+    except Exception as exc:
+        err_console.print(f"[red]Provider error:[/red] {exc}")
+        raise typer.Exit(1) from exc
+
+    retriever = DenseRetriever(embedder=embedder, store=store)
+    deps = PipelineDeps(llm=llm, embedder=embedder, store=store)
+
+    # ── Pipeline steps ─────────────────────────────────────────────────────
 
     def _retrieve_step(state: RAGState, d: PipelineDeps) -> RAGState:
-        # Phase 0: no-op retrieval — returns empty context list.
-        # Replaced in Phase 2 when Standard RAG is implemented.
-        state.retrieval_results = []
+        if store.count() == 0:
+            state.metadata["retrieval_note"] = "index empty — answering from LLM knowledge"
+            state.retrieval_results = []
+            return state
+        state.retrieval_results = retriever.retrieve(state.question, top_k=k)
         return state
 
     def _generate_step(state: RAGState, d: PipelineDeps) -> RAGState:
-        ctx_text = (
-            "\n\n".join(r.chunk.text for r in state.retrieval_results)
-            or "(no retrieved context — direct LLM answer)"
-        )
+        if state.retrieval_results:
+            ctx_text = "\n\n---\n\n".join(
+                f"[Source chunk {r.rank + 1}, score {r.score:.3f}]\n{r.chunk.text}"
+                for r in state.retrieval_results
+            )
+            system_msg = (
+                "You are a helpful assistant. "
+                "Answer the question using ONLY the provided context. "
+                "If the context does not contain enough information, say so."
+            )
+        else:
+            ctx_text = "(no retrieved context)"
+            system_msg = (
+                "You are a helpful assistant. "
+                "No context was retrieved. Answer from your own knowledge and note the limitation."
+            )
         messages = [
-            {
-                "role": "system",
-                "content": (
-                    "You are a helpful assistant. "
-                    "Answer the question using the provided context. "
-                    "If no context is provided, answer from your own knowledge."
-                ),
-            },
-            {
-                "role": "user",
-                "content": f"Context:\n{ctx_text}\n\nQuestion: {state.question}",
-            },
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": f"Context:\n{ctx_text}\n\nQuestion: {state.question}"},
         ]
         state.answer = d.llm.complete(messages)
         return state
+
+    # ── Run ────────────────────────────────────────────────────────────────
 
     pipeline = Pipeline(
         steps=[("retrieve", _retrieve_step), ("generate", _generate_step)],
         deps=deps,
     )
-
     state = RAGState(question=question)
     try:
         state, traces = pipeline.run(state)
@@ -118,25 +187,8 @@ def query(
     console.print(Panel(result.answer, title="Answer", border_style="green"))
     console.print(format_trace(result))
 
-
-# ── index ─────────────────────────────────────────────────────────────────────
-
-@app.command()
-def index(
-    path: str = typer.Argument(..., help="Path to a file or directory of documents"),
-    architecture: str = typer.Option("standard", "--arch", "-a"),
-    config_root: Optional[Path] = typer.Option(None, "--config-root", hidden=True),
-) -> None:
-    """Index documents into the vector store.
-
-    Phase 0: prints a placeholder. Full indexing arrives in Phase 1
-    (ingestion primitives) and Phase 2 (Standard RAG pipeline).
-    """
-    _get_config(config_root)
-    console.print(
-        f"[yellow]index[/yellow] command is a Phase 1 feature. "
-        f"Path '{path}', arch '{architecture}' noted."
-    )
+    if state.metadata.get("retrieval_note"):
+        console.print(f"\n[yellow]Note:[/yellow] {state.metadata['retrieval_note']}")
 
 
 # ── providers ─────────────────────────────────────────────────────────────────
