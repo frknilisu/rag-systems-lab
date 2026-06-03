@@ -60,13 +60,22 @@ Built in phases — each one is complete (code + tests + docs) before the next s
 |-------|------|--------|
 | 0 | Foundation: config, core types/interfaces, pipeline runner, registry, LiteLLM + SentenceTransformers + Chroma providers, Typer CLI | ✅ Done |
 | 0.5 | Repo-as-tutorial setup: README, mkdocs site, concept primers | ✅ Done |
-| 1 | Ingestion & retrieval primitives: loaders, chunkers, BM25, dense retrieval, indexer | 🔜 Next |
-| 2 | Standard RAG — first full architecture + teaching chapter | ⏳ |
+| 1 | Ingestion & retrieval primitives: loaders, chunkers (fixed/recursive), Indexer (embed+Chroma+BM25), DenseRetriever, BM25Retriever, RRF fusion, HybridRetriever, CrossEncoderReranker | ✅ Done |
+| 2 | Standard RAG — first full architecture + teaching chapter | 🔜 Next |
 | 3–10 | Remaining 9 architectures | ⏳ |
 
-**What works today:** `rag-lab query` runs a traced pipeline (no-op retrieval → LLM generation). Switch providers with a config change — Ollama works out of the box with no API key.
+**What works today:**
 
-**What's next (Phase 1):** wire in real data loading, chunking, and retrieval so `rag-lab index` and `rag-lab query` do actual RAG.
+```bash
+# Index a document (real chunking + embedding + Chroma + BM25)
+rag-lab index data/corpora/intro_to_rag.txt
+
+# Query with real dense retrieval + LLM generation
+RAGLAB_LLM__PROFILE=ollama RAGLAB_LLM__MODEL="ollama/qwen2.5:3b" \
+rag-lab query "What is the difference between BM25 and dense retrieval?"
+```
+
+**What's next (Phase 2):** Standard RAG — the first proper `RAGPipeline` implementation with a full teaching chapter, runnable example, and n8n spec.
 
 ## Contributing
 
